@@ -16,6 +16,7 @@ local awful_util = require("awful.util")
 local theme = require("beautiful")
 local glib = require("lgi").GLib
 local wibox = require("wibox")
+local freq_cache = awful.util.get_cache_dir() .. "/freq_menu"
 
 local utils = {}
 
@@ -270,6 +271,71 @@ end
 -- @treturn int Text width.
 function utils.compute_text_width(text, s)
     return utils.compute_textbox_width(wibox.widget.textbox(awful_util.escape(text)), s)
+end
+
+--- Retrieve the chached frequency table
+-- @treturn A table with the frequency of cmdline.
+function utils.get_frequency_table()
+    local f = io.open(freq_cache, "r")
+    if (f == null) then
+        return nil
+    end
+    local t = f:read("*all")
+    f:close()
+
+    freq_table = {}
+    for line in t:gmatch"[^\n]+" do 
+        print(line)
+        cmdline, count = line:match("(\"[^\"]*\") ([0-9]*)")
+
+        cmdline = cmdline:gsub("\"", "")
+
+        freq_table[cmdline] = tonumber(count)
+    end
+    return freq_table
+end
+
+
+function starts_with(string,start)
+   return string.sub(string,1,string.len(start))==start
+end
+
+--- Update cache entry
+-- @tparam str cmdline Command to be updated
+-- @tparam int value the new value of the program.
+function utils.update_cache_entry_value(cmdline, value)
+    local hFile = io.open(freq_cache, "r") --Reading.
+    local lines = {}
+    local restOfFile
+    local lineCt = 1
+    local edited = false
+    cmdline = "\"" .. cmdline .. "\""
+    if(hFile ~= nil) then
+        for line in hFile:lines() do
+            if(starts_with(line, cmdline)) then
+                -- If correct program update the value
+                lines[#lines + 1] = cmdline .. " " .. value
+                restOfFile = hFile:read("*a")
+                edited = true
+                break
+            else
+                lineCt = lineCt + 1
+                lines[#lines + 1] = line
+            end
+        end
+       hFile.close() 
+    end
+
+    if(not edited) then
+        restOfFile = cmdline .. " " .. 1
+    end
+
+    hFile = io.open(freq_cache, "w")
+    for i, line in ipairs(lines) do
+        hFile:write(line, "\n")
+    end
+    hFile:write(restOfFile)
+    hFile:close()
 end
 
 return utils

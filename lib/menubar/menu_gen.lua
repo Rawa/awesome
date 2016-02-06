@@ -82,6 +82,15 @@ local function trim(s)
     return s
 end
 
+function get_value(freq_table, cmdline)
+    if(freq_table == nil) then
+        return 0
+    else
+        return freq_table[cmdline] or 0
+    end
+end
+
+
 --- Generate an array of all visible menu entries.
 -- @return all menu entries.
 function menu_gen.generate()
@@ -89,6 +98,9 @@ function menu_gen.generate()
     menu_gen.lookup_category_icons()
 
     local result = {}
+
+    --FIXME Always return a table empty if it doesn't exist.
+    local freq_table = utils.get_frequency_table()
 
     for _, dir in ipairs(menu_gen.all_menu_dirs) do
         local entries = utils.parse_dir(dir)
@@ -112,9 +124,12 @@ function menu_gen.generate()
                 if target_category then
                     local name = trim(program.Name) or ""
                     local cmdline = trim(program.cmdline) or ""
+                    -- If there is a chached value apply it.
+                    local value = get_value(freq_table, cmdline)
                     local icon = program.icon_path or nil
                     table.insert(result, { name = name,
                                            cmdline = cmdline,
+                                           value = value,
                                            icon = icon,
                                            category = target_category })
                 end

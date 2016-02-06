@@ -100,7 +100,23 @@ local function label(o)
     end
 end
 
---- Perform an action for the given menu item.
+-- RAWA Update a menu chached value
+local function update_value(menu_entry)
+    new_value = calculate_new_value(menu_entry.value)
+    menubar.utils.update_cache_entry_value(menu_entry.cmdline, new_value)
+    menu_entry.value = new_value
+end
+
+local function compare(a, b )
+    return a.value > b.value
+end
+
+function calculate_new_value(value)
+    if(value == nil) then value = 0 end
+    return value + 1
+end
+
+-- Perform an action for the given menu item.
 -- @param o The menu item.
 -- @return if the function processed the callback, new awful.prompt command, new awful.prompt prompt text.
 local function perform_action(o)
@@ -113,6 +129,7 @@ local function perform_action(o)
         return true, "", new_prompt
     elseif shownitems[current_item].cmdline then
         awful.spawn(shownitems[current_item].cmdline)
+        update_value(shownitems[current_item])
         -- Let awful.prompt execute dummy exec_callback and
         -- done_callback to stop the keygrabber properly.
         return false
@@ -167,6 +184,7 @@ local function menulist_update(query, scr)
     shownitems = {}
     local pattern = awful.util.query_to_pattern(query)
     local match_inside = {}
+    programs = {}
 
     -- First we add entries which names match the command from the
     -- beginning to the table shownitems, and the ones that contain
@@ -196,12 +214,17 @@ local function menulist_update(query, scr)
                 or string.match(v.cmdline, pattern) then
                 if string.match(v.name, "^" .. pattern)
                     or string.match(v.cmdline, "^" .. pattern) then
-                    table.insert(shownitems, v)
+                    table.insert(programs, v)
                 else
                     table.insert(match_inside, v)
                 end
             end
         end
+    end
+
+    table.sort(programs, compare)
+    for i=1,#programs do
+        shownitems[#shownitems+1] = programs[i]
     end
 
     -- Now add items from match_inside to shownitems
